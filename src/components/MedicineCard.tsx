@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Star, AlertTriangle, Sparkles } from 'lucide-react';
+import { ChevronDown, Star, AlertTriangle, Sparkles, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Medicine } from '@/types/medicine';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useBookmarks } from '@/hooks/useBookmarks';
+import { useToast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
 
 interface MedicineCardProps {
@@ -13,6 +16,9 @@ interface MedicineCardProps {
 
 export const MedicineCard = ({ medicine, index }: MedicineCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
+  const { toast } = useToast();
+  const bookmarked = isBookmarked(medicine.name);
 
   const handleExpand = () => {
     setIsExpanded(!isExpanded);
@@ -57,6 +63,22 @@ export const MedicineCard = ({ medicine, index }: MedicineCardProps) => {
 
   const severity = getSideEffectSeverity();
 
+  const handleBookmark = () => {
+    if (bookmarked) {
+      removeBookmark(medicine.name);
+      toast({
+        title: "Removed from bookmarks",
+        description: `${medicine.name} has been removed from your bookmarks`,
+      });
+    } else {
+      addBookmark(medicine);
+      toast({
+        title: "Added to bookmarks",
+        description: `${medicine.name} has been saved to your bookmarks`,
+      });
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 50, scale: 0.9 }}
@@ -77,9 +99,25 @@ export const MedicineCard = ({ medicine, index }: MedicineCardProps) => {
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
-              <CardTitle className="text-xl mb-2 text-foreground">
-                {medicine.name}
-              </CardTitle>
+              <div className="flex items-start justify-between mb-2">
+                <CardTitle className="text-xl text-foreground">
+                  {medicine.name}
+                </CardTitle>
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleBookmark}
+                    className="h-8 w-8"
+                  >
+                    {bookmarked ? (
+                      <BookmarkCheck size={18} className="text-primary fill-primary" />
+                    ) : (
+                      <Bookmark size={18} />
+                    )}
+                  </Button>
+                </motion.div>
+              </div>
               <div className="flex items-center gap-1 mb-2">
                 {renderStars(medicine.rating || 0)}
                 <span className="ml-2 text-sm font-semibold text-foreground">
