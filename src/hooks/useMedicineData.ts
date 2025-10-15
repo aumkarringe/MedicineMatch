@@ -10,9 +10,10 @@ export const useMedicineData = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const response = await fetch('/data/Medicine_Details.csv');
+        // Use BASE_URL to make it work on GitHub Pages
+        const response = await fetch(`${import.meta.env.BASE_URL}data/Medicine_Details.csv`);
         const csvText = await response.text();
-        
+
         Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
@@ -21,10 +22,9 @@ export const useMedicineData = () => {
               const excellentReview = parseFloat(row['Excellent Review %']) || 0;
               const averageReview = parseFloat(row['Average Review %']) || 0;
               const poorReview = parseFloat(row['Poor Review %']) || 0;
-              
-              // Calculate weighted rating (0-5 scale)
+
               const rating = ((excellentReview * 5 + averageReview * 3 + poorReview * 1) / 100) || 0;
-              
+
               return {
                 name: row['Medicine Name'] || '',
                 composition: row['Composition'] || '',
@@ -37,8 +37,8 @@ export const useMedicineData = () => {
                 poorReview,
                 rating: parseFloat(rating.toFixed(1))
               };
-            }).filter(med => med.name); // Filter out empty entries
-            
+            }).filter(med => med.name);
+
             setMedicines(parsedData);
             setLoading(false);
           },
