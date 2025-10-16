@@ -9,22 +9,30 @@ import { MedicineComparison } from '@/components/MedicineComparison';
 import { StatisticsSection } from '@/components/StatisticsSection';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LoadingState } from '@/components/LoadingState';
+import { AIQuestionnaire } from '@/components/AIQuestionnaire';
+import { PharmacyFinder } from '@/components/PharmacyFinder';
 import { useMedicineData } from '@/hooks/useMedicineData';
 import { useBookmarks } from '@/hooks/useBookmarks';
 import { extractKeywords, searchMedicinesByUsage, sortByRating } from '@/utils/medicineSearch';
+import { getAIRecommendations, QuestionnaireData } from '@/utils/aiRecommendation';
 import { Medicine } from '@/types/medicine';
-import { AlertCircle, ArrowLeftRight, Bookmark } from 'lucide-react';
+import { AlertCircle, ArrowLeftRight, Bookmark, Brain, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const { medicines, loading, error } = useMedicineData();
   const { bookmarks } = useBookmarks();
+  const { toast } = useToast();
   const [searchResults, setSearchResults] = useState<Medicine[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [showPharmacyFinder, setShowPharmacyFinder] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [aiExplanation, setAiExplanation] = useState('');
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -42,6 +50,33 @@ const Index = () => {
 
   const handleSortByRating = () => {
     setSearchResults(sortByRating(searchResults));
+  };
+
+  const handleQuestionnaireSubmit = async (data: QuestionnaireData) => {
+    toast({
+      title: "Analyzing your symptoms...",
+      description: "AI is finding the best medicines for you"
+    });
+
+    try {
+      const { recommendations, explanation } = await getAIRecommendations(data, medicines);
+      setSearchResults(recommendations);
+      setAiExplanation(explanation);
+      setHasSearched(true);
+      setShowBookmarks(false);
+      setShowPharmacyFinder(false);
+      
+      toast({
+        title: "AI Recommendations Ready!",
+        description: `Found ${recommendations.length} suitable medicines`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to get AI recommendations. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {
@@ -69,7 +104,10 @@ const Index = () => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setShowBookmarks(!showBookmarks)}
+            onClick={() => {
+              setShowBookmarks(!showBookmarks);
+              setShowPharmacyFinder(false);
+            }}
             className="rounded-full w-10 h-10 relative"
           >
             <Bookmark size={20} className={showBookmarks ? 'fill-primary text-primary' : ''} />
@@ -80,16 +118,52 @@ const Index = () => {
             )}
           </Button>
         </motion.div>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => {
+              setShowPharmacyFinder(!showPharmacyFinder);
+              setShowBookmarks(false);
+            }}
+            className="rounded-full w-10 h-10"
+          >
+            <Store size={20} className={showPharmacyFinder ? 'text-primary' : ''} />
+          </Button>
+        </motion.div>
       </div>
       
       <HeroSection />
       
+      {/* AI Questionnaire Button */}
+      <div className="text-center mb-6 px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Button
+            onClick={() => setShowQuestionnaire(true)}
+            size="lg"
+            className="gap-2 text-lg px-8 py-6"
+          >
+            <Brain size={24} />
+            AI Health Assistant
+          </Button>
+          <p className="text-sm text-muted-foreground mt-2">
+            Get personalized medicine recommendations powered by AI
+          </p>
+        </motion.div>
+      </div>
       
       <div className="text-center mb-4">
         <VoiceSearch onTranscript={handleVoiceTranscript} />
       </div>
       
       <SearchSection onSearch={handleSearch} />
+
+      {/* Pharmacy Finder */}
+      {showPharmacyFinder && <PharmacyFinder />}
 
       {/* Bookmarks View */}
       {showBookmarks && (
@@ -129,7 +203,7 @@ const Index = () => {
         </motion.section>
       )}
 
-      {hasSearched && !showBookmarks && (
+      {hasSearched && !showBookmarks && !showPharmacyFinder && (
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -137,6 +211,22 @@ const Index = () => {
           className="py-8 px-4"
         >
           <div className="max-w-7xl mx-auto">
+            {aiExplanation && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-6 p-4 bg-primary/10 rounded-lg border border-primary/20"
+              >
+                <div className="flex items-start gap-3">
+                  <Brain className="text-primary flex-shrink-0 mt-1" size={20} />
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-1">AI Recommendation</h3>
+                    <p className="text-sm text-muted-foreground">{aiExplanation}</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            
             {searchResults.length > 0 ? (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -187,7 +277,7 @@ const Index = () => {
       )}
 
       {/* Statistics Section - Always visible */}
-      {!showBookmarks && (
+      {!showBookmarks && !showPharmacyFinder && (
         <StatisticsSection medicines={medicines} />
       )}
 
@@ -198,7 +288,14 @@ const Index = () => {
         onClose={() => setShowComparison(false)}
       />
 
-      {!hasSearched && !showBookmarks && (
+      {/* AI Questionnaire Modal */}
+      <AIQuestionnaire
+        isOpen={showQuestionnaire}
+        onClose={() => setShowQuestionnaire(false)}
+        onSubmit={handleQuestionnaireSubmit}
+      />
+
+      {!hasSearched && !showBookmarks && !showPharmacyFinder && (
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
