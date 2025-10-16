@@ -4,7 +4,7 @@ declare global {
   interface Window {
     puter: {
       ai: {
-        chat: (prompt: string, options?: { model?: string; temperature?: number; max_tokens?: number }) => Promise<string>;
+        chat: (prompt: string, options?: { model?: string; temperature?: number; max_tokens?: number }) => Promise<string | any>;
       };
     };
   }
@@ -70,9 +70,23 @@ Important: Recommend medicines that are commonly available worldwide.`;
       max_tokens: 800
     });
 
+    // Handle response - it might be a string or an object
+    let responseText = '';
+    if (typeof response === 'string') {
+      responseText = response;
+    } else if (response && typeof response === 'object') {
+      // Handle object response format
+      responseText = response.text || response.content || response.message || JSON.stringify(response);
+    } else {
+      console.error('Unexpected response format:', response);
+      throw new Error('Invalid AI response format');
+    }
+
+    console.log('AI Response:', responseText);
+
     // Parse the AI response
-    const recommendedMatch = response.match(/RECOMMENDED MEDICINES:\s*(.+)/i);
-    const explanationMatch = response.match(/EXPLANATION:\s*(.+)/is);
+    const recommendedMatch = responseText.match(/RECOMMENDED MEDICINES:\s*(.+)/i);
+    const explanationMatch = responseText.match(/EXPLANATION:\s*(.+)/is);
 
     const recommendedNames = recommendedMatch 
       ? recommendedMatch[1].split(',').map(name => name.trim().toLowerCase())
@@ -82,7 +96,7 @@ Important: Recommend medicines that are commonly available worldwide.`;
       recommendedNames.some(name => medicine.name.toLowerCase().includes(name))
     );
 
-    const explanation = explanationMatch ? explanationMatch[1].trim() : response;
+    const explanation = explanationMatch ? explanationMatch[1].trim() : responseText;
 
     return {
       recommendations: recommendations.length > 0 ? recommendations : availableMedicines.slice(0, 5),
@@ -111,8 +125,18 @@ export async function findNearbyPharmacies(location: string): Promise<string[]> 
       max_tokens: 300
     });
 
+    // Handle response format
+    let responseText = '';
+    if (typeof response === 'string') {
+      responseText = response;
+    } else if (response && typeof response === 'object') {
+      responseText = response.text || response.content || response.message || JSON.stringify(response);
+    }
+
+    console.log('Pharmacy Response:', responseText);
+
     // Parse the response into an array
-    const pharmacies = response
+    const pharmacies = responseText
       .split('\n')
       .filter(line => line.trim().startsWith('-'))
       .map(line => line.replace('-', '').trim())
