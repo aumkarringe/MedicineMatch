@@ -18,12 +18,20 @@ interface AIQuestionnaireProps {
 const commonSymptoms = [
   'Headache', 'Fever', 'Cough', 'Cold', 'Sore Throat',
   'Body Pain', 'Nausea', 'Dizziness', 'Fatigue', 'Stomach Pain',
-  'Diarrhea', 'Constipation', 'Rash', 'Allergies', 'Insomnia'
+  'Diarrhea', 'Constipation', 'Rash', 'Allergies', 'Insomnia',
+  'Chest Pain', 'Shortness of Breath', 'Joint Pain', 'Back Pain',
+  'Vomiting', 'Anxiety', 'Depression', 'Muscle Aches'
 ];
 
 const commonConditions = [
   'Diabetes', 'Hypertension', 'Asthma', 'Heart Disease', 'Kidney Disease',
-  'Liver Disease', 'Thyroid', 'Arthritis', 'None'
+  'Liver Disease', 'Thyroid', 'Arthritis', 'COPD', 'Anemia',
+  'Migraine', 'Epilepsy', 'Cancer', 'HIV/AIDS', 'None'
+];
+
+const lifestyleFactors = [
+  'Smoking', 'Alcohol Consumption', 'Regular Exercise', 'Sedentary Lifestyle',
+  'Stress', 'Poor Sleep', 'Vegetarian Diet', 'Vegan Diet', 'Pregnancy', 'Breastfeeding'
 ];
 
 export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnaireProps) => {
@@ -33,11 +41,18 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
     severity: 'moderate',
     duration: '',
     age: '',
+    weight: '',
+    height: '',
     existingConditions: [],
-    allergies: []
+    currentMedications: [],
+    allergies: [],
+    lifestyleFactors: [],
+    previousTreatments: '',
+    location: ''
   });
   const [customSymptom, setCustomSymptom] = useState('');
   const [customAllergy, setCustomAllergy] = useState('');
+  const [customMedication, setCustomMedication] = useState('');
 
   const handleSymptomToggle = (symptom: string) => {
     setFormData(prev => ({
@@ -54,6 +69,15 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
       existingConditions: prev.existingConditions.includes(condition)
         ? prev.existingConditions.filter(c => c !== condition)
         : [...prev.existingConditions, condition]
+    }));
+  };
+
+  const handleLifestyleToggle = (factor: string) => {
+    setFormData(prev => ({
+      ...prev,
+      lifestyleFactors: prev.lifestyleFactors?.includes(factor)
+        ? prev.lifestyleFactors.filter(f => f !== factor)
+        : [...(prev.lifestyleFactors || []), factor]
     }));
   };
 
@@ -84,6 +108,23 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
     }));
   };
 
+  const addCustomMedication = () => {
+    if (customMedication.trim() && !formData.currentMedications?.includes(customMedication.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        currentMedications: [...(prev.currentMedications || []), customMedication.trim()]
+      }));
+      setCustomMedication('');
+    }
+  };
+
+  const removeMedication = (medication: string) => {
+    setFormData(prev => ({
+      ...prev,
+      currentMedications: prev.currentMedications?.filter(m => m !== medication) || []
+    }));
+  };
+
   const handleSubmit = () => {
     onSubmit(formData);
     onClose();
@@ -97,6 +138,10 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
         return formData.duration && formData.age;
       case 3:
         return true;
+      case 4:
+        return true;
+      case 5:
+        return formData.location && formData.location.trim().length > 0;
       default:
         return false;
     }
@@ -133,7 +178,7 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
             
             {/* Progress indicator */}
             <div className="flex gap-2 mt-4">
-              {[1, 2, 3].map(i => (
+              {[1, 2, 3, 4, 5].map(i => (
                 <div
                   key={i}
                   className={`h-2 flex-1 rounded-full transition-colors ${
@@ -240,6 +285,27 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
                     onChange={(e) => setFormData(prev => ({ ...prev, age: e.target.value }))}
                   />
                 </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="mb-2 block">Weight (kg) - Optional</Label>
+                    <Input
+                      type="number"
+                      placeholder="Enter your weight"
+                      value={formData.weight}
+                      onChange={(e) => setFormData(prev => ({ ...prev, weight: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-2 block">Height (cm) - Optional</Label>
+                    <Input
+                      type="number"
+                      placeholder="Enter your height"
+                      value={formData.height}
+                      onChange={(e) => setFormData(prev => ({ ...prev, height: e.target.value }))}
+                    />
+                  </div>
+                </div>
               </motion.div>
             )}
 
@@ -302,6 +368,118 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
                 </div>
               </motion.div>
             )}
+
+            {step === 4 && (
+              <motion.div
+                key="step4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div>
+                  <Label className="mb-3 block text-base font-semibold">
+                    Are you currently taking any medications?
+                  </Label>
+                  <div className="flex gap-2 mb-3">
+                    <Input
+                      placeholder="Enter medication name"
+                      value={customMedication}
+                      onChange={(e) => setCustomMedication(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addCustomMedication()}
+                    />
+                    <Button onClick={addCustomMedication}>Add</Button>
+                  </div>
+                  {formData.currentMedications && formData.currentMedications.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.currentMedications.map(medication => (
+                        <span
+                          key={medication}
+                          className="px-3 py-1 bg-primary/20 rounded-full text-sm flex items-center gap-2"
+                        >
+                          {medication}
+                          <X
+                            size={14}
+                            className="cursor-pointer"
+                            onClick={() => removeMedication(medication)}
+                          />
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="mb-3 block text-base font-semibold">
+                    Lifestyle Factors (Select all that apply)
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {lifestyleFactors.map(factor => (
+                      <div key={factor} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={factor}
+                          checked={formData.lifestyleFactors?.includes(factor)}
+                          onCheckedChange={() => handleLifestyleToggle(factor)}
+                        />
+                        <Label htmlFor={factor} className="cursor-pointer text-sm">
+                          {factor}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="mb-2 block text-base font-semibold">
+                    Have you tried any treatments for this condition before?
+                  </Label>
+                  <Input
+                    placeholder="e.g., painkillers, home remedies, etc."
+                    value={formData.previousTreatments}
+                    onChange={(e) => setFormData(prev => ({ ...prev, previousTreatments: e.target.value }))}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {step === 5 && (
+              <motion.div
+                key="step5"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div>
+                  <Label className="mb-3 block text-base font-semibold">
+                    Your Location (Required for pharmacy recommendations)
+                  </Label>
+                  <Input
+                    placeholder="e.g., New York, USA or enter your city"
+                    value={formData.location}
+                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    We'll use this to find nearby pharmacies where you can purchase the recommended medicines.
+                  </p>
+                </div>
+
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-2">Review Your Information</h4>
+                  <div className="text-sm space-y-1 text-muted-foreground">
+                    <p><strong>Symptoms:</strong> {formData.symptoms.join(', ')}</p>
+                    <p><strong>Duration:</strong> {formData.duration}</p>
+                    <p><strong>Age:</strong> {formData.age}</p>
+                    {formData.existingConditions.length > 0 && (
+                      <p><strong>Conditions:</strong> {formData.existingConditions.join(', ')}</p>
+                    )}
+                    {formData.allergies.length > 0 && (
+                      <p><strong>Allergies:</strong> {formData.allergies.join(', ')}</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
 
           <div className="flex justify-between mt-8">
@@ -314,7 +492,7 @@ export const AIQuestionnaire = ({ isOpen, onClose, onSubmit }: AIQuestionnairePr
               Back
             </Button>
 
-            {step < 3 ? (
+            {step < 5 ? (
               <Button
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canProceed()}
